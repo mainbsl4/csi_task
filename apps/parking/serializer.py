@@ -86,23 +86,6 @@ class TelemetrySerializer(serializers.ModelSerializer):
 
 
 # Telemetry bulk serializer
-# class TelemetryBulkSerializer(serializers.ModelSerializer):
-
-#     records = TelemetrySerializer(many=True, write_only=True)
-
-#     class Meta:
-#         model = Telemetry
-#         fields = ["records"]
-
-#     def create(self, validated_data):
-#         records_data = validated_data.pop("records")
-#         for record in records_data:
-#             Telemetry.objects.create(**record)
-
-#         raise serializers.ValidationError("Bulk telemetry data created successfully.")
-#         # return {"message": "Bulk telemetry data created successfully."}
-
-
 
 
 class TelemetryBulkSerializer(serializers.Serializer):
@@ -113,25 +96,29 @@ class TelemetryBulkSerializer(serializers.Serializer):
 
         objs = []
         for rec in records:
-            # rec["device"] already resolved by SlugRelatedField source="device"
-            objs.append(Telemetry(
-                device=rec["device"],
-                voltage=rec["voltage"],
-                current=rec["current"],
-                power_factor=rec["power_factor"],
-                timestamp=rec["timestamp"],
-            ))
+            objs.append(
+                Telemetry(
+                    device=rec["device"],
+                    voltage=rec["voltage"],
+                    current=rec["current"],
+                    power_factor=rec["power_factor"],
+                    timestamp=rec["timestamp"],
+                )
+            )
 
-        # ignore duplicates via unique_together (device,timestamp)
         with transaction.atomic():
             created = Telemetry.objects.bulk_create(objs, ignore_conflicts=True)
 
-        # Update last_seen for involved devices (optional but recommended)
         device_ids = list({o.device_id for o in objs})
         now = timezone.now()
         Device.objects.filter(id__in=device_ids).update(last_seen=now)
 
-        return {"inserted": len(created), "received": len(objs), "skipped": len(objs) - len(created)}
+        return {
+            "inserted": len(created),
+            "received": len(objs),
+            "skipped": len(objs) - len(created),
+        }
+
 
 # parking log serializer
 class ParkingLogSerializer(serializers.ModelSerializer):

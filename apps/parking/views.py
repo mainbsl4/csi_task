@@ -277,7 +277,6 @@ class DashboardSummaryList(APIView):
 
         active_devices_count = devices_qs.filter(is_active=True).count()
 
-        # Current occupancy = latest log per device in the filtered logs_qs
         latest_by_device = logs_qs.values("device_id").annotate(
             last_ts=Max("timestamp")
         )
@@ -295,7 +294,6 @@ class DashboardSummaryList(APIView):
             latest_rows = ParkingLog.objects.filter(q)
             current_occupied_devices = latest_rows.filter(is_occupied=True).count()
 
-        # alerts_triggered_count: ideally Alert table থেকে; আপাতত placeholder বা ParkingLog based নয়
         alerts_triggered_count = 0
 
         # Target + efficiency (only meaningful when date exists and ParkingTarget exists)
@@ -310,7 +308,6 @@ class DashboardSummaryList(APIView):
             if target_total > 0:
                 efficiency = round((total_parking_events / target_total) * 100, 2)
         else:
-            # no date => target doesn't make sense; keep None
             target_total = None
             efficiency = None
 
@@ -355,18 +352,13 @@ class DashboardSummaryList(APIView):
                 "active_devices_count": devices_qs.filter(
                     parking_zone=zone, is_active=True
                 ).count(),
-                "alerts_triggered_count": 0,  # later from Alert model
+                "alerts_triggered_count": 0,
                 "target_parking_events": zone_target,
                 "efficiency": zone_eff,
             }
 
         return Response(
             {
-                # "filters": {
-                #     "date": date_str,
-                #     "facility": facility_id,
-                #     "zone_code": zone_code,
-                # },
                 "total_parking_events": total_parking_events,
                 "current_occupancy_count": current_occupied_devices,
                 "active_devices_count": active_devices_count,
@@ -394,10 +386,9 @@ class HourlyUsageView(APIView):
         return start, end, None
 
     def get(self, request):
-        date_str = request.query_params.get("date")  # optional
-        facility_id = request.query_params.get("facility_id")  # optional
-        zone_code = request.query_params.get("zone_code")  # optional
-
+        date_str = request.query_params.get("date")
+        facility_id = request.query_params.get("facility_id")
+        zone_code = request.query_params.get("zone_code")
         qs = ParkingLog.objects.all()
 
         # ---- optional date filter ----
@@ -492,7 +483,6 @@ class DeviceStatusView(APIView):
 
         out = []
         for d in qs:
-            # status
             if not d.last_seen or d.last_seen < offline_cutoff:
                 status_label = "OFFLINE"
             elif d.active_alerts > 0:
@@ -505,7 +495,7 @@ class DeviceStatusView(APIView):
                 score += 60
             if d.is_active:
                 score += 20
-            # penalty for active alerts
+
             score -= min(d.active_alerts * 10, 30)
             score = max(0, min(100, score))
 
