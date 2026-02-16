@@ -27,7 +27,8 @@ urlpatterns = [
         "facilities/<int:pk>/",
         ParkingFacilityDetail.as_view(),
         name="parking-facility-detail",
-    ),  # parking zone urls
+    ),
+    # parking zone urls
     path("zones/", ParkingZoneList.as_view(), name="parking-zone-list"),
     path("zones/<int:pk>/", ParkingZoneDetail.as_view(), name="parking-zone-detail"),
     # device urls
